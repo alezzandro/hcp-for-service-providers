@@ -1,0 +1,53 @@
+flowchart TB
+  subgraph aws ["AWS (shared VPC)"]
+    direction TB
+
+    subgraph hubCluster ["Hub Cluster — 3x m5.2xlarge"]
+      direction TB
+      ACM["ACM 2.16 Hub"]
+      MCE["MCE / HyperShift Operator"]
+
+      subgraph cpA ["clusters-tenant-a"]
+        APISA["kube-apiserver"]
+        ETCDA["etcd"]
+        KONNA["konnectivity-server"]
+      end
+
+      subgraph cpB ["clusters-tenant-b"]
+        APISB["kube-apiserver"]
+        ETCDB["etcd"]
+        KONNB["konnectivity-server"]
+      end
+    end
+
+    subgraph virtCluster ["Infra Cluster — 3x m5.metal (bare-metal)"]
+      direction TB
+      OCPVIRT["OCP Virtualization"]
+      NMSTATE["NMState Operator"]
+
+      subgraph secNIC ["Secondary NIC (ens6)"]
+        BR300["ens6.300 / br300"]
+        BR301["ens6.301 / br301"]
+      end
+
+      subgraph vmsA ["Tenant A Worker VMs"]
+        VMA1["worker-a-1"]
+        VMA2["worker-a-2"]
+      end
+
+      subgraph vmsB ["Tenant B Worker VMs"]
+        VMB1["worker-b-1"]
+        VMB2["worker-b-2"]
+      end
+    end
+  end
+
+  KONNA -->|"mTLS Konnectivity"| VMA1
+  KONNA -->|"mTLS Konnectivity"| VMA2
+  KONNB -->|"mTLS Konnectivity"| VMB1
+  KONNB -->|"mTLS Konnectivity"| VMB2
+
+  VMA1 --- BR300
+  VMA2 --- BR300
+  VMB1 --- BR301
+  VMB2 --- BR301

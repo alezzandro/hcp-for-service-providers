@@ -1,0 +1,27 @@
+# NodeNetworkConfigurationPolicy -- OVS Bridge on Secondary NIC
+#
+# Creates an OVS bridge (br-secondary) with the secondary NIC as a port.
+# OVN bridge-mappings are configured separately via ovs-vsctl in
+# 07-configure-secondary-network.sh to avoid NMState verification conflicts
+# with OVN-managed patch ports on re-apply.
+#
+# The placeholder __SECONDARY_NIC__ is replaced by 07-configure-secondary-network.sh
+# with the actual detected NIC name (e.g., ens1 on m5.metal).
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: secondary-nic-ovs-bridge
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: br-secondary
+        type: ovs-bridge
+        state: up
+        bridge:
+          options:
+            stp: false
+          port:
+            - name: __SECONDARY_NIC__

@@ -1,0 +1,29 @@
+# NetworkAttachmentDefinition -- Tenant A VLAN 300 Bridge
+#
+# Attach KubeVirt worker VMs to the br300 Linux bridge.
+# Uses whereabouts IPAM for IP assignment (no external DHCP on AWS).
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: nad-vlan300
+  namespace: clusters-tenant-a
+spec:
+  config: |-
+    {
+      "cniVersion": "0.3.1",
+      "name": "nad-vlan300",
+      "type": "bridge",
+      "bridge": "br300",
+      "isGateway": true,
+      "ipam": {
+        "type": "whereabouts",
+        "range": "10.100.30.0/24",
+        "range_start": "10.100.30.10",
+        "range_end": "10.100.30.90",
+        "gateway": "10.100.30.1"
+      },
+      "macspoofchk": true,
+      "mtu": 1500,
+      "preserveDefaultVlan": false
+    }

@@ -1,0 +1,9 @@
+# Namespace for Tenant A resources on the infrastructure cluster.
+# KubeVirt VMs and NADs live here.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: clusters-tenant-a
+  labels:
+    tenant: tenant-a

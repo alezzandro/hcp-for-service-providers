@@ -1,0 +1,59 @@
+# RBAC for HyperShift External Infrastructure
+#
+# This Role grants the permissions required by HyperShift to manage
+# KubeVirt VMs on the infrastructure cluster. Apply in each tenant's
+# infra namespace (e.g., clusters-tenant-a) and bind to the hcp-infra
+# service account.
+#
+# Reference: https://hypershift.pages.dev/how-to/kubevirt/external-infrastructure/
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: hcp-external-infra
+rules:
+  - apiGroups: ["kubevirt.io"]
+    resources:
+      - virtualmachines
+      - virtualmachines/finalizers
+      - virtualmachineinstances
+    verbs: ["*"]
+  - apiGroups: ["cdi.kubevirt.io"]
+    resources:
+      - datavolumes
+    verbs: ["*"]
+  - apiGroups: [""]
+    resources:
+      - services
+      - secrets
+    verbs: ["*"]
+  - apiGroups: ["route.openshift.io"]
+    resources:
+      - routes
+      - routes/custom-host
+    verbs: ["*"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources:
+      - endpointslices
+      - endpointslices/restricted
+    verbs: ["*"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources:
+      - volumesnapshots
+    verbs: ["get", "create", "delete"]
+  - apiGroups: [""]
+    resources:
+      - persistentvolumeclaims
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: hcp-external-infra
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: hcp-external-infra
+subjects:
+  - kind: ServiceAccount
+    name: hcp-infra

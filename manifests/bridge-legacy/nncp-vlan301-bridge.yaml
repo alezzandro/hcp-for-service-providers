@@ -1,0 +1,39 @@
+# NodeNetworkConfigurationPolicy -- Tenant B VLAN 301 Bridge
+#
+# The placeholder __SECONDARY_NIC__ is replaced by the setup script
+# (07-configure-secondary-network.sh) with the actual detected NIC name.
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: tenant-b-vlan301-bridge
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: __SECONDARY_NIC__.301
+        type: vlan
+        state: up
+        vlan:
+          base-iface: __SECONDARY_NIC__
+          id: 301
+        ipv4:
+          enabled: false
+        ipv6:
+          enabled: false
+
+      - name: br301
+        type: linux-bridge
+        state: up
+        mtu: 1500
+        bridge:
+          options:
+            stp:
+              enabled: false
+          port:
+            - name: __SECONDARY_NIC__.301
+        ipv4:
+          enabled: false
+        ipv6:
+          enabled: false

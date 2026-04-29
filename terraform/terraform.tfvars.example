@@ -1,0 +1,28 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# terraform.tfvars is git-ignored — never commit it.
+#
+# Most values come from credentials.env. After sourcing it you can
+# generate this file automatically:
+#
+#   source credentials.env
+#   cat > terraform/terraform.tfvars <<EOF
+#   aws_region          = "${AWS_DEFAULT_REGION}"
+#   cluster_name_prefix = "hcp-demo"
+#   base_domain         = "${BASE_DOMAIN}"
+#   EOF
+
+aws_region          = "us-east-2"
+cluster_name_prefix = "hcp-demo"
+
+# Must be an existing Route53 public hosted zone.
+# For OPENTLC sandboxes the domain looks like: sandbox1234.opentlc.com
+base_domain = "sandbox1234.opentlc.com"
+
+# Override if your region uses different AZ suffixes
+# availability_zones = ["us-east-2a", "us-east-2b", "us-east-2c"]
+
+# Optional: additional tags for cost tracking
+# tags = {
+#   "team"    = "platform-engineering"
+#   "project" = "hcp-demo"
+# }

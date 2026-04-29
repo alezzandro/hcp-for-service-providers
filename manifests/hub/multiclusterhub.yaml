@@ -1,0 +1,11 @@
+# MultiClusterHub -- ACM hub instance
+#
+# Creates the ACM hub with default settings. MCE is automatically
+# configured as part of the hub installation.
+---
+apiVersion: operator.open-cluster-management.io/v1
+kind: MultiClusterHub
+metadata:
+  name: multiclusterhub
+  namespace: open-cluster-management
+spec: {}

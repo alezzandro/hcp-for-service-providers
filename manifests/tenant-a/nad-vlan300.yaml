@@ -1,0 +1,30 @@
+# NetworkAttachmentDefinition -- Tenant A OVN LocalNet (VLAN 300)
+#
+# Attach KubeVirt worker VMs to OVN-managed localnet with VLAN 300.
+# OVN tags frames at the OVS bridge port (br-secondary) and manages
+# IPAM internally -- no external whereabouts or DHCP needed.
+#
+# The "name" field ("tenant-a-physnet") must match a bridge-mapping entry
+# set via ovs-vsctl on each node (see 07-configure-secondary-network.sh).
+# Each tenant gets a unique name so OVN creates separate logical switches.
+# VMs using this NAD are fully live-migratable because OVN re-programs
+# flows atomically on the destination node during migration.
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: nad-vlan300
+  namespace: clusters-tenant-a
+spec:
+  config: |-
+    {
+      "cniVersion": "0.3.1",
+      "name": "tenant-a-physnet",
+      "type": "ovn-k8s-cni-overlay",
+      "topology": "localnet",
+      "netAttachDefName": "clusters-tenant-a/nad-vlan300",
+      "vlanID": 300,
+      "subnets": "10.100.30.0/24",
+      "excludeSubnets": "10.100.30.0/32,10.100.30.1/32,10.100.30.255/32",
+      "mtu": 1500
+    }

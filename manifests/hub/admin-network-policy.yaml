@@ -1,0 +1,99 @@
+# AdminNetworkPolicy -- Platform-Level Isolation for Hosted Control Planes
+#
+# Apply on the hub cluster to enforce non-bypassable network isolation
+# between hosted control plane namespaces. ANP rules are evaluated before
+# namespace-scoped NetworkPolicy.
+#
+# The setup script (10-apply-security-policies.sh) replaces the placeholder
+# CIDRs with actual cluster values before applying.
+---
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: hcp-control-plane-isolation
+spec:
+  priority: 10
+  subject:
+    namespaces:
+      matchLabels:
+        hypershift.openshift.io/hosted-control-plane: "true"
+  egress:
+    - name: allow-same-namespace
+      action: Allow
+      to:
+        - namespaces:
+            sameLabels:
+              - kubernetes.io/metadata.name
+
+    - name: allow-dns
+      action: Allow
+      to:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - portNumber:
+            protocol: UDP
+            port: 5353
+        - portNumber:
+            protocol: TCP
+            port: 5353
+        - portNumber:
+            protocol: UDP
+            port: 53
+        - portNumber:
+            protocol: TCP
+            port: 53
+
+    - name: allow-dns-openshift
+      action: Allow
+      to:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - portNumber:
+            protocol: UDP
+            port: 5353
+        - portNumber:
+            protocol: TCP
+            port: 5353
+
+    - name: allow-hosting-cluster-api
+      action: Allow
+      to:
+        - networks:
+            - 10.0.0.1/32
+      ports:
+        - portNumber:
+            protocol: TCP
+            port: 6443
+
+    - name: allow-external-https
+      action: Allow
+      to:
+        - networks:
+            - 0.0.0.0/0
+      ports:
+        - portNumber:
+            protocol: TCP
+            port: 443
+
+    - name: deny-cross-tenant
+      action: Deny
+      to:
+        - namespaces:
+            matchLabels:
+              hypershift.openshift.io/hosted-control-plane: "true"
+
+    - name: deny-egress-to-mgmt-service-cidr
+      action: Deny
+      to:
+        - networks:
+            - 172.30.0.0/16
+
+    - name: pass-remaining
+      action: Pass
+      to:
+        - networks:
+            - 0.0.0.0/0

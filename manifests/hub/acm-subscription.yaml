@@ -1,0 +1,31 @@
+# ACM Operator -- Install Red Hat Advanced Cluster Management
+#
+# This creates the namespace, OperatorGroup, and Subscription to install
+# ACM from the certified Red Hat operator catalog. MCE is installed
+# automatically as a dependency.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: open-cluster-management
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: open-cluster-management-og
+  namespace: open-cluster-management
+spec:
+  targetNamespaces:
+    - open-cluster-management
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: advanced-cluster-management
+  namespace: open-cluster-management
+spec:
+  channel: "release-2.16"
+  name: advanced-cluster-management
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic

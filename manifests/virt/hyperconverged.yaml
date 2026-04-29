@@ -1,0 +1,10 @@
+# HyperConverged -- OCP Virtualization instance
+#
+# Creates the KubeVirt, CDI, and networking components.
+---
+apiVersion: hco.kubevirt.io/v1beta1
+kind: HyperConverged
+metadata:
+  name: kubevirt-hyperconverged
+  namespace: openshift-cnv
+spec: {}
