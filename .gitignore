@@ -38,3 +38,6 @@ ssh-key.pub
 *.swp
 *.swo
 *~
+
+# Others
+private/

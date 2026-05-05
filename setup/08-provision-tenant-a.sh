@@ -17,7 +17,7 @@ INFRA_NAMESPACE="clusters-${TENANT_NAME}"
 CLUSTER_CIDR="10.132.0.0/14"
 SERVICE_CIDR="172.31.0.0/16"
 METALLB_VIP="10.100.30.100"
-RELEASE_IMAGE="quay.io/openshift-release-dev/ocp-release:4.19.0-multi"
+RELEASE_IMAGE="quay.io/openshift-release-dev/ocp-release:4.19.12-multi"
 
 echo "=== Provisioning Tenant A hosted cluster ==="
 
