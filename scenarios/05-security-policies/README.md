@@ -10,11 +10,12 @@ EgressFirewall inside tenant clusters.
    tenants cannot override. The ANP denies cross-namespace traffic between
    control plane namespaces and restricts egress to only required paths.
 
-2. **AdminNetworkPolicy (ANP) on the Infra Cluster**: Denies all traffic
-   between tenant-labelled namespaces on the OVN primary overlay. Platform
+2. **AdminNetworkPolicy (ANP) on the Infra Cluster**: A two-layer policy.
+   Per-tenant ANPs at priority 9 allow same-namespace traffic (needed for the
+   tenant cluster's internal GENEVE tunnels between worker VMs). A generic ANP
+   at priority 10 denies all remaining cross-tenant overlay traffic. Platform
    namespaces (kubelet, DNS, Konnectivity, virt-handler) remain reachable.
-   Intra-tenant VM communication uses the secondary VLAN network, so the
-   overlay deny has no operational impact.
+   When onboarding a new tenant, a per-tenant allow ANP must be added.
 
 3. **HyperShift NetworkPolicies**: Automatically generated per control plane
    namespace. These are the first line of defense, but tenants with namespace
@@ -48,7 +49,10 @@ oc get namespaces -l hypershift.openshift.io/hosted-control-plane=true
 ```bash
 export KUBECONFIG=setup/.generated-virt-kubeconfig
 
-# Show the ANP
+# Show all three ANPs (per-tenant allow at priority 9, deny at priority 10)
+oc get adminnetworkpolicy
+
+# Show the cross-tenant deny ANP
 oc get adminnetworkpolicy tenant-vm-isolation -o yaml
 
 # Show which namespaces it applies to

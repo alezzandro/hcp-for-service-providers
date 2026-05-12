@@ -82,12 +82,12 @@ tagging on a secondary network interface:
    KubeVirt can live-migrate VMs between nodes with zero downtime
 5. **Unique CIDRs**: Each tenant gets non-overlapping pod and service CIDRs
 6. **AdminNetworkPolicy (primary overlay)**: All tenant VMs share the infra
-   cluster's OVN overlay.  An ANP (`tenant-vm-isolation`) denies traffic
-   between any namespaces carrying a `tenant` label, blocking overlay-level
-   reachability between tenant worker VMs.  Platform namespaces (kubelet, DNS,
-   Konnectivity, virt-handler) and external egress remain explicitly allowed.
-   Intra-tenant communication uses the secondary VLAN network, so the overlay
-   deny has no operational impact.
+   cluster's OVN overlay.  A pair of ANPs enforces isolation: per-tenant
+   ANPs at priority 9 allow same-namespace traffic (needed for the tenant
+   cluster's internal GENEVE tunnels between worker VMs), while a generic
+   ANP (`tenant-vm-isolation`) at priority 10 denies cross-tenant overlay
+   traffic.  Platform namespaces (kubelet, DNS, Konnectivity, virt-handler)
+   and external egress remain explicitly allowed.
 
 ### Layer C — Ingress/Egress Isolation
 

@@ -120,9 +120,13 @@ no longer causes a degraded Network CO. If using older z-streams (e.g.
 4.19.0, 4.20.0), you may need to remove `additionalRoutingCapabilities`
 after MetalLB installation.
 
-**Network isolation**: The infra cluster AdminNetworkPolicy
+**Network isolation**: The infra cluster cross-tenant deny ANP
 (`tenant-vm-isolation`) automatically covers the new tenant namespace because
-it targets any namespace with a `tenant` label. No ANP changes are needed.
+it targets any namespace with a `tenant` label. However, a per-tenant allow
+ANP (`allow-tenant-c-internal`) must be created at priority 9 to permit
+same-namespace overlay traffic (needed for the tenant cluster's internal
+GENEVE tunnels). Copy an existing per-tenant ANP from
+`manifests/virt/admin-network-policy.yaml` and update the namespace name.
 
 ### Cleanup
 

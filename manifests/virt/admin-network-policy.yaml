@@ -5,20 +5,83 @@
 # overlay; without this policy a pod in clusters-tenant-a can reach pods in
 # clusters-tenant-b on overlay IPs (kubelet, node-exporter, etc.).
 #
-# Design:
-#   - Subject: every namespace carrying a "tenant" label.
-#   - Platform namespaces (no "tenant" label) are explicitly allowed so
-#     Konnectivity, DNS, kubelet, image-registry, and virt-handler remain
-#     reachable.
-#   - Traffic between any tenant-labelled namespaces is denied (including
-#     same-namespace overlay traffic, which is not needed because intra-tenant
-#     communication uses the secondary VLAN network).
-#   - External egress (0.0.0.0/0) is allowed for image pulls and
-#     Konnectivity tunnels to the hub.
+# The policy is split into two layers evaluated by priority:
+#
+#   Priority 9  -- Per-tenant "allow-tenant-X-internal" ANPs that permit
+#                  same-namespace traffic.  Tenant clusters need cross-node
+#                  GENEVE tunnels between their own virt-launcher pods for
+#                  internal pod networking, so intra-namespace overlay traffic
+#                  must remain open.
+#
+#   Priority 10 -- Generic "tenant-vm-isolation" ANP that denies all
+#                  remaining inter-tenant traffic.  Platform namespaces (no
+#                  "tenant" label) and external egress are explicitly allowed.
+#
+# Because priority 9 is evaluated before 10, same-namespace traffic hits the
+# Allow before the Deny.  Cross-tenant traffic has no matching Allow at
+# priority 9 and falls through to the Deny at priority 10.
 #
 # Note: ANP "sameLabels" is not used because OVN-Kubernetes expands it into
 # a static address set covering ALL namespaces that carry the key, making it
-# unable to distinguish same-tenant from cross-tenant traffic.
+# unable to distinguish same-tenant from cross-tenant traffic.  Per-tenant
+# ANPs with explicit matchLabels are used instead.
+#
+# When onboarding a new tenant, add a corresponding "allow-tenant-X-internal"
+# ANP (copy one of the blocks below, update the namespace name).
+
+# ── Per-Tenant Allow (Priority 9) ─────────────────────────────────────────
+---
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: allow-tenant-a-internal
+spec:
+  priority: 9
+  subject:
+    namespaces:
+      matchLabels:
+        kubernetes.io/metadata.name: clusters-tenant-a
+  ingress:
+    - name: allow-same-namespace
+      action: Allow
+      from:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: clusters-tenant-a
+  egress:
+    - name: allow-same-namespace
+      action: Allow
+      to:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: clusters-tenant-a
+---
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: allow-tenant-b-internal
+spec:
+  priority: 9
+  subject:
+    namespaces:
+      matchLabels:
+        kubernetes.io/metadata.name: clusters-tenant-b
+  ingress:
+    - name: allow-same-namespace
+      action: Allow
+      from:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: clusters-tenant-b
+  egress:
+    - name: allow-same-namespace
+      action: Allow
+      to:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: clusters-tenant-b
+
+# ── Cross-Tenant Deny (Priority 10) ───────────────────────────────────────
 ---
 apiVersion: policy.networking.k8s.io/v1alpha1
 kind: AdminNetworkPolicy
