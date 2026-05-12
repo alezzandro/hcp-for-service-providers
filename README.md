@@ -15,8 +15,9 @@ running tenant worker VMs on VLAN-isolated OVN localnet networks.
   network interface -- separate L2 broadcast domains with no cross-tenant path.
 - **Per-tenant ingress**: MetalLB inside each hosted cluster provides a
   dedicated VIP on the tenant's VLAN.
-- **Security-in-depth**: AdminNetworkPolicy on the hub, HyperShift
-  auto-generated NetworkPolicies, EgressFirewall inside each tenant cluster.
+- **Security-in-depth**: AdminNetworkPolicy on hub and infra clusters,
+  HyperShift auto-generated NetworkPolicies, EgressFirewall inside each
+  tenant cluster.
 - **Live-migratable tenant VMs**: OVN localnet networking allows KubeVirt
   to live-migrate tenant VMs between bare-metal nodes, enabling zero-downtime
   infrastructure upgrades.
@@ -85,7 +86,7 @@ vi credentials.env
 cp ~/pull-secret.json .
 cp ~/.ssh/id_rsa.pub .
 
-# 4. Run the full setup (takes ~90 min)
+# 4. Run the full setup (~2 h 45 min end-to-end)
 #    terraform.tfvars is auto-generated from credentials.env
 ./setup/full-setup.sh
 
@@ -95,20 +96,24 @@ cp ~/.ssh/id_rsa.pub .
 
 ## Setup Scripts
 
-| Script | Purpose |
-|--------|---------|
-| `00-prereqs.sh` | Validate tools, AWS quotas, required files |
-| `01-provision-infrastructure.sh` | Terraform: VPC, subnets, Route53, security groups |
-| `02-install-hub-cluster.sh` | Install hub OCP cluster (IPI) |
-| `03-install-virt-cluster.sh` | Install bare-metal OCP cluster (IPI, m5.metal) |
-| `04-attach-secondary-nic.sh` | Attach secondary ENIs to bare-metal nodes |
-| `05-install-acm-mce.sh` | Install ACM + MCE + enable HyperShift |
-| `06-install-ocpvirt-nmstate.sh` | Install OCP Virtualization + NMState |
-| `06b-install-efs-csi.sh` | Install EFS CSI driver + StorageClass (when toggle is on) |
-| `07-configure-secondary-network.sh` | OVS bridge, OVN localnet NADs, IP masquerade |
-| `08-provision-tenant-a.sh` | Create Tenant A hosted cluster + MetalLB + DNS |
-| `09-provision-tenant-b.sh` | Create Tenant B hosted cluster + MetalLB + DNS |
-| `10-apply-security-policies.sh` | AdminNetworkPolicy, EgressFirewall |
+| Script | Purpose | Approx. Time |
+|--------|---------|:------------:|
+| `00-prereqs.sh` | Validate tools, AWS quotas, required files | < 1 min |
+| `01-provision-infrastructure.sh` | Terraform: VPC, subnets, Route53, security groups | ~2.5 min |
+| `02-install-hub-cluster.sh` | Install hub OCP cluster (IPI) | ~42 min |
+| `03-install-virt-cluster.sh` | Install bare-metal OCP cluster (IPI, m5.metal) | ~63 min |
+| `04-attach-secondary-nic.sh` | Attach secondary ENIs to bare-metal nodes | < 1 min |
+| `05-install-acm-mce.sh` | Install ACM + MCE + enable HyperShift | ~6 min |
+| `06-install-ocpvirt-nmstate.sh` | Install OCP Virtualization + NMState | ~5 min |
+| `06b-install-efs-csi.sh` | Install EFS CSI driver + StorageClass (when toggle is on) | skipped by default |
+| `07-configure-secondary-network.sh` | OVS bridge, OVN localnet NADs, IP masquerade | < 1 min |
+| `08-provision-tenant-a.sh` | Create Tenant A hosted cluster + MetalLB + DNS | ~26 min |
+| `09-provision-tenant-b.sh` | Create Tenant B hosted cluster + MetalLB + DNS | ~19 min |
+| `10-apply-security-policies.sh` | AdminNetworkPolicy, EgressFirewall | < 1 min |
+| | **Total (end-to-end)** | **~2 h 45 min** |
+
+| Utility | Purpose |
+|---------|---------|
 | `full-setup.sh` | Run all scripts in order |
 | `health-check.sh` | Verify all components are healthy |
 | `reset-demo.sh` | Delete tenant clusters, keep base infra |
@@ -184,6 +189,7 @@ I/O performance.
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Bare-Metal Deployment Guide](docs/baremetal-deployment.md)
 - [Prerequisites](docs/prerequisites.md)
 - [AWS Network Design](docs/aws-network-design.md)
 - [Cost Estimate](docs/cost-estimate.md)
