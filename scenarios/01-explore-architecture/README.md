@@ -58,23 +58,17 @@ oc get vmi -A
 oc get vmi -n clusters-tenant-a -o wide
 ```
 
-### Bridge Topology on Bare-Metal Nodes
+### OVS Bridge Topology on Bare-Metal Nodes
 
 ```bash
-# Show bridges and VLAN interfaces on a node
+# Show OVS bridge and OVN bridge-mappings on a node
 NODE=$(oc get nodes -o jsonpath='{.items[0].metadata.name}')
 oc debug node/${NODE} -- chroot /host bash -c "
-  echo '=== Bridges ==='
-  bridge link show
+  echo '=== OVS bridges ==='
+  ovs-vsctl show | head -30
   echo ''
-  echo '=== VLAN interfaces ==='
-  ip -d link show type vlan
-  echo ''
-  echo '=== Bridge br300 ports ==='
-  bridge link show master br300
-  echo ''
-  echo '=== Bridge br301 ports ==='
-  bridge link show master br301
+  echo '=== OVN bridge-mappings ==='
+  ovs-vsctl get Open_vSwitch . external-ids:ovn-bridge-mappings
 "
 ```
 

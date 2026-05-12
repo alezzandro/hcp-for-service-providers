@@ -5,7 +5,7 @@
 # IPAM internally -- no external whereabouts or DHCP needed.
 #
 # The "name" field ("tenant-a-physnet") must match a bridge-mapping entry
-# set via ovs-vsctl on each node (see 07-configure-secondary-network.sh).
+# declared in the NNCP ovn.bridge-mappings (see manifests/virt/nncp-ovs-bridge.yaml).
 # Each tenant gets a unique name so OVN creates separate logical switches.
 # VMs using this NAD are fully live-migratable because OVN re-programs
 # flows atomically on the destination node during migration.

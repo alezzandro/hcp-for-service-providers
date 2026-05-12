@@ -5,9 +5,9 @@ with VLAN isolation, dedicated ingress, and security policies.
 
 ## Talking Points
 
-1. **Repeatable process**: Each new tenant follows the same 5-step pattern:
-   bridge-mapping -> OVN localnet NAD -> hcp create -> MetalLB -> DNS. The OVS
-   bridge is already in place from the base infrastructure setup.
+1. **Repeatable process**: Each new tenant follows the same pattern:
+   update NNCP bridge-mapping -> namespace + OVN localnet NAD -> hcp create ->
+   MetalLB -> DNS. The OVS bridge is already in place from the base setup.
 
 2. **No shared infrastructure**: The new tenant gets its own VLAN (via OVN
    localnet), CIDR ranges, MetalLB VIP, and DNS entries.
@@ -26,20 +26,33 @@ This scenario provisions a third tenant ("tenant-c") with VLAN 302.
 ### Step 1: Create Namespace and OVN LocalNet NAD (on infra cluster)
 
 The OVS bridge (`br-secondary`) is already configured from script 07. Each new
-tenant needs a bridge-mapping added on every node, a namespace, and a NAD with
-a unique localnet name and VLAN ID.
+tenant needs a bridge-mapping entry added to the NNCP, a namespace, and a NAD
+with a unique localnet name and VLAN ID.
 
-First, add the bridge-mapping on each node:
+First, add the bridge-mapping to the existing NNCP:
 
 ```bash
-for node in $(oc get nodes -o jsonpath='{.items[*].metadata.name}'); do
-  CURRENT=$(oc debug "node/${node}" --quiet -- chroot /host \
-    ovs-vsctl get Open_vSwitch . external-ids:ovn-bridge-mappings)
-  CURRENT="${CURRENT//\"/}"
-  oc debug "node/${node}" --quiet -- chroot /host \
-    ovs-vsctl set Open_vSwitch . \
-    external-ids:ovn-bridge-mappings="${CURRENT},tenant-c-physnet:br-secondary"
-done
+export KUBECONFIG=setup/.generated-virt-kubeconfig
+
+# Patch the NNCP to add the new tenant's bridge-mapping
+oc patch nncp secondary-nic-ovs-bridge --type=merge -p '
+spec:
+  desiredState:
+    ovn:
+      bridge-mappings:
+        - localnet: tenant-a-physnet
+          bridge: br-secondary
+          state: present
+        - localnet: tenant-b-physnet
+          bridge: br-secondary
+          state: present
+        - localnet: tenant-c-physnet
+          bridge: br-secondary
+          state: present
+'
+
+# Wait for NNCP to reconcile on all nodes
+oc wait nncp secondary-nic-ovs-bridge --for=condition=Available --timeout=120s
 ```
 
 Then create the namespace and NAD:
@@ -101,16 +114,11 @@ oc get hostedcluster tenant-c -n clusters -w
 After the hosted cluster is available, install MetalLB inside it and create
 the DNS record (similar to setup scripts 08/09).
 
-**Important**: After installing MetalLB, the CNO in HCP mode will set
-`additionalRoutingCapabilities.providers: [FRR]` but lacks the `FRR_K8S_IMAGE`
-environment variable, causing a degraded network CO. Since we only use L2
-mode, remove this setting immediately after MetalLB installation:
-
-```bash
-export KUBECONFIG=setup/.generated-tenant-c-kubeconfig
-oc patch network.operator cluster --type=json \
-  -p='[{"op": "remove", "path": "/spec/additionalRoutingCapabilities"}]'
-```
+**Note**: On OCP 4.19.12+ and 4.20.18+, the HyperShift operator correctly
+populates the `FRR_K8S_IMAGE` environment variable, so MetalLB installation
+no longer causes a degraded Network CO. If using older z-streams (e.g.
+4.19.0, 4.20.0), you may need to remove `additionalRoutingCapabilities`
+after MetalLB installation.
 
 ### Cleanup
 

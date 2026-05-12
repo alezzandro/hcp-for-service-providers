@@ -74,7 +74,7 @@ tagging on a secondary network interface:
 
 1. **OVS bridge**: `br-secondary` on the secondary NIC, managed by NMState
 2. **OVN bridge-mappings**: Per-tenant mappings (`tenant-a-physnet`, `tenant-b-physnet`)
-   map to `br-secondary`, configured via `ovs-vsctl` so OVN can reach the physical network
+   map to `br-secondary`, declared in the NMState NNCP `ovn.bridge-mappings` section
 3. **OVN localnet NADs**: Each tenant's NAD specifies a unique localnet name and VLAN ID
    (300, 301); OVN
    tags frames at the OVS bridge port, creating separate L2 broadcast domains

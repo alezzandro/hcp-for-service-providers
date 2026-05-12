@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # 07-configure-secondary-network.sh -- Configure OVN localnet on secondary NIC.
 #
-# Creates an OVS bridge (br-secondary) on the secondary NIC via NMState,
-# declares an OVN bridge-mapping (tenant-physnet), and applies per-tenant
-# OVN localnet NADs with VLAN tagging.  This approach makes tenant VMs
-# live-migratable because OVN manages L2 forwarding at the SDN level.
+# Creates an OVS bridge (br-secondary) on the secondary NIC via NMState NNCP.
+# OVN bridge-mappings are declared in the same NNCP (with allow-extra-patch-ports)
+# so NMState manages them declaratively and they persist across reboots.
+# Per-tenant OVN localnet NADs with VLAN tagging are applied afterward.
+# This approach makes tenant VMs live-migratable because OVN manages L2
+# forwarding at the SDN level.
 set -euo pipefail
 
 DEMO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -66,34 +68,6 @@ for i in $(seq 1 30); do
   sleep 20
 done
 
-# --- Set OVN bridge-mappings on each node ---
-# Bridge-mappings are set via ovs-vsctl rather than the NNCP to avoid
-# NMState verification conflicts with OVN-managed patch ports.
-# Each tenant NAD has a unique localnet name so OVN creates separate
-# logical switches and subnets.
-BRIDGE_MAPPINGS="tenant-a-physnet:br-secondary,tenant-b-physnet:br-secondary"
-echo "--- Configuring OVN bridge-mappings on each node ---"
-for node in $(oc get nodes -o jsonpath='{.items[*].metadata.name}'); do
-  echo "    Setting bridge-mappings on ${node}..."
-  CURRENT=$(oc debug "node/${node}" --quiet -- chroot /host \
-    ovs-vsctl get Open_vSwitch . external-ids:ovn-bridge-mappings 2>/dev/null || true)
-  CURRENT="${CURRENT//\"/}"
-
-  # Append our tenant mappings to any existing physnet mapping
-  if [[ -z "${CURRENT}" || "${CURRENT}" == *"No such"* ]]; then
-    NEW_MAPPINGS="${BRIDGE_MAPPINGS}"
-  elif [[ "${CURRENT}" == *"tenant-a-physnet"* ]]; then
-    echo "    Bridge-mappings already configured."
-    continue
-  else
-    NEW_MAPPINGS="${CURRENT},${BRIDGE_MAPPINGS}"
-  fi
-
-  oc debug "node/${node}" --quiet -- chroot /host \
-    ovs-vsctl set Open_vSwitch . external-ids:ovn-bridge-mappings="${NEW_MAPPINGS}" 2>/dev/null
-  echo "    Done: ${NEW_MAPPINGS}"
-done
-
 # --- Create namespaces and NADs ---
 echo "--- Creating tenant namespaces and OVN localnet NADs on infra cluster ---"
 for tenant_dir in tenant-a tenant-b; do
@@ -130,7 +104,7 @@ done
 echo ""
 echo "Secondary network configured (OVN localnet):"
 echo "  - OVS bridge: br-secondary on ${SECONDARY_NIC}"
-echo "  - OVN bridge-mappings: tenant-a-physnet, tenant-b-physnet -> br-secondary"
+echo "  - OVN bridge-mappings (NNCP-managed): tenant-a-physnet, tenant-b-physnet -> br-secondary"
 echo "  - Tenant A: OVN localnet VLAN 300 (10.100.30.0/24)"
 echo "  - Tenant B: OVN localnet VLAN 301 (10.100.31.0/24)"
 echo "  - IP masquerade for outbound NAT"
