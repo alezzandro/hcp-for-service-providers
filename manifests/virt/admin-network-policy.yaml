@@ -1,0 +1,73 @@
+# AdminNetworkPolicy -- Tenant VM Isolation on the Infrastructure Cluster
+#
+# Prevents cross-tenant traffic on the OVN primary overlay between tenant
+# VM namespaces.  All tenant worker VMs share the infra cluster's OVN
+# overlay; without this policy a pod in clusters-tenant-a can reach pods in
+# clusters-tenant-b on overlay IPs (kubelet, node-exporter, etc.).
+#
+# Design:
+#   - Subject: every namespace carrying a "tenant" label.
+#   - Platform namespaces (no "tenant" label) are explicitly allowed so
+#     Konnectivity, DNS, kubelet, image-registry, and virt-handler remain
+#     reachable.
+#   - Traffic between any tenant-labelled namespaces is denied (including
+#     same-namespace overlay traffic, which is not needed because intra-tenant
+#     communication uses the secondary VLAN network).
+#   - External egress (0.0.0.0/0) is allowed for image pulls and
+#     Konnectivity tunnels to the hub.
+#
+# Note: ANP "sameLabels" is not used because OVN-Kubernetes expands it into
+# a static address set covering ALL namespaces that carry the key, making it
+# unable to distinguish same-tenant from cross-tenant traffic.
+---
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: tenant-vm-isolation
+spec:
+  priority: 10
+  subject:
+    namespaces:
+      matchExpressions:
+        - key: tenant
+          operator: Exists
+  ingress:
+    - name: allow-from-platform-namespaces
+      action: Allow
+      from:
+        - namespaces:
+            matchExpressions:
+              - key: tenant
+                operator: DoesNotExist
+    - name: deny-from-tenant-namespaces
+      action: Deny
+      from:
+        - namespaces:
+            matchExpressions:
+              - key: tenant
+                operator: Exists
+  egress:
+    - name: allow-to-platform-namespaces
+      action: Allow
+      to:
+        - namespaces:
+            matchExpressions:
+              - key: tenant
+                operator: DoesNotExist
+    - name: deny-to-tenant-namespaces
+      action: Deny
+      to:
+        - namespaces:
+            matchExpressions:
+              - key: tenant
+                operator: Exists
+    - name: allow-external
+      action: Allow
+      to:
+        - networks:
+            - 0.0.0.0/0
+    - name: pass-remaining
+      action: Pass
+      to:
+        - networks:
+            - 0.0.0.0/0

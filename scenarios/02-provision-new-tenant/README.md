@@ -120,6 +120,10 @@ no longer causes a degraded Network CO. If using older z-streams (e.g.
 4.19.0, 4.20.0), you may need to remove `additionalRoutingCapabilities`
 after MetalLB installation.
 
+**Network isolation**: The infra cluster AdminNetworkPolicy
+(`tenant-vm-isolation`) automatically covers the new tenant namespace because
+it targets any namespace with a `tenant` label. No ANP changes are needed.
+
 ### Cleanup
 
 ```bash

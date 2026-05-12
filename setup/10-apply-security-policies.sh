@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# 10-apply-security-policies.sh -- Apply ANP on hub, EgressFirewall in tenant clusters.
+# 10-apply-security-policies.sh -- Apply ANPs on hub + infra, EgressFirewall in tenants.
 set -euo pipefail
 
 DEMO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SETUP_DIR="${DEMO_DIR}/setup"
 HUB_KUBECONFIG="${SETUP_DIR}/.generated-hub-kubeconfig"
+VIRT_KUBECONFIG="${SETUP_DIR}/.generated-virt-kubeconfig"
 TENANT_A_KUBECONFIG="${SETUP_DIR}/.generated-tenant-a-kubeconfig"
 TENANT_B_KUBECONFIG="${SETUP_DIR}/.generated-tenant-b-kubeconfig"
 
@@ -28,6 +29,14 @@ sed -e "s|172.30.0.0/16|${HUB_SVC_CIDR}|g" \
 
 echo "    AdminNetworkPolicy applied."
 
+# --- AdminNetworkPolicy on infra cluster ---
+echo "--- Applying AdminNetworkPolicy on infra cluster (tenant VM isolation) ---"
+export KUBECONFIG="${VIRT_KUBECONFIG}"
+
+oc apply -f "${DEMO_DIR}/manifests/virt/admin-network-policy.yaml"
+
+echo "    AdminNetworkPolicy applied on infra cluster."
+
 # --- EgressFirewall in tenant clusters ---
 for tenant in a b; do
   TENANT_KC="${SETUP_DIR}/.generated-tenant-${tenant}-kubeconfig"
@@ -48,4 +57,5 @@ done
 echo ""
 echo "Security policies applied:"
 echo "  - AdminNetworkPolicy on hub (hcp-control-plane-isolation)"
+echo "  - AdminNetworkPolicy on infra (tenant-vm-isolation)"
 echo "  - EgressFirewall in Tenant A and B (customer-workloads namespace)"
